@@ -1,0 +1,31 @@
+{
+  "name": "pokedash-pota",
+  "version-string": "1.0",
+  "builtin-baseline": "f7423ee180c4b7f40d43402c2feb3859161ef625",
+  "dependencies": [
+    "boost-asio",
+    "boost-system",
+    "boost-lexical-cast",
+    "boost-lockfree",
+    "boost-range",
+    "gmp",
+    "libmariadb",
+    "luajit",
+    "pugixml"
+  ],
+  "overrides": [
+    {
+      "version": "6.3.0",
+      "port-version": 5,
+      "name": "gmp"
+    },
+    {
+      "version-date": "2026-07-09",
+      "name": "vcpkg-make"
+    },
+    {
+      "version-date": "2025-05-29",
+      "name": "vcpkg-cmake-get-vars"
+    }
+  ]
+}

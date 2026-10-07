@@ -1,0 +1,4 @@
+/build/
+/.tools/
+/vcpkg_installed/
+/CMakeUserPresets.json

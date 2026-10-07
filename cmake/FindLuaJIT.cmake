@@ -1,63 +1,35 @@
-# Locate LuaJIT library
-# This module defines
-#  LUAJIT_FOUND, if false, do not try to link to Lua
-#  LUA_LIBRARIES
-#  LUA_INCLUDE_DIR, where to find lua.h
-#  LUAJIT_VERSION_STRING, the version of Lua found (since CMake 2.8.8)
-
-## Copied from default CMake FindLua51.cmake
-
-find_path(LUA_INCLUDE_DIR luajit.h
-  HINTS
-    ENV LUA_DIR
-  PATH_SUFFIXES include/luajit-2.0 include
-  PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /sw # Fink
-  /opt/local # DarwinPorts
-  /opt/csw # Blastwave
-  /opt
-)
-
-find_library(LUA_LIBRARY
-  NAMES luajit-5.1
-  HINTS
-    ENV LUA_DIR
-  PATH_SUFFIXES lib
-  PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /sw
-  /opt/local
-  /opt/csw
-  /opt
-)
-
-if(LUA_LIBRARY)
-  # include the math library for Unix
-  if(UNIX AND NOT APPLE)
-    find_library(LUA_MATH_LIBRARY m)
-    set( LUA_LIBRARIES "${LUA_LIBRARY};${LUA_MATH_LIBRARY}" CACHE STRING "Lua Libraries")
-  # For Windows and Mac, don't need to explicitly include the math library
-  else()
-    set( LUA_LIBRARIES "${LUA_LIBRARY}" CACHE STRING "Lua Libraries")
-  endif()
+find_package(unofficial-luajit CONFIG QUIET)
+if(TARGET unofficial::luajit::luajit)
+    add_library(LuaJIT::LuaJIT INTERFACE IMPORTED)
+    set_target_properties(LuaJIT::LuaJIT PROPERTIES INTERFACE_LINK_LIBRARIES unofficial::luajit::luajit)
+    set(LuaJIT_FOUND TRUE)
+    return()
 endif()
-
-if(LUA_INCLUDE_DIR AND EXISTS "${LUA_INCLUDE_DIR}/luajit.h")
-  file(STRINGS "${LUA_INCLUDE_DIR}/luajit.h" luajit_version_str REGEX "^#define[ \t]+LUAJIT_VERSION[ \t]+\"LuaJIT .+\"")
-
-  string(REGEX REPLACE "^#define[ \t]+LUAJIT_VERSION[ \t]+\"LuaJIT ([^\"]+)\".*" "\\1" LUAJIT_VERSION_STRING "${luajit_version_str}")
-  unset(luajit_version_str)
+find_path(LUAJIT_INCLUDE_DIR NAMES luajit.h HINTS ENV LUA_DIR
+    PATH_SUFFIXES include/luajit-2.1 include/luajit-2.0 include/luajit include luajit-2.1 luajit-2.0)
+find_library(LUAJIT_LIBRARY NAMES luajit-5.1 luajit lua51
+    HINTS ENV LUA_DIR PATH_SUFFIXES lib lib64)
+if(VCPKG_INSTALLED_DIR AND VCPKG_TARGET_TRIPLET)
+    find_library(LUAJIT_DEBUG_LIBRARY NAMES luajit-5.1 luajit lua51
+        PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib" NO_DEFAULT_PATH)
 endif()
-
+if(LUAJIT_INCLUDE_DIR)
+    file(STRINGS "${LUAJIT_INCLUDE_DIR}/luajit.h" _luajit_version
+        REGEX "^#define[ \t]+LUAJIT_VERSION[ \t]+")
+    string(REGEX REPLACE [[.*LuaJIT ([^"]+).*]] "\\1" LUAJIT_VERSION_STRING "${_luajit_version}")
+endif()
 include(FindPackageHandleStandardArgs)
-# handle the QUIETLY and REQUIRED arguments and set LUA_FOUND to TRUE if
-# all listed variables are TRUE
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(LuaJIT
-                                  REQUIRED_VARS LUA_LIBRARIES LUA_INCLUDE_DIR
-                                  VERSION_VAR LUAJIT_VERSION_STRING)
-
-mark_as_advanced(LUA_INCLUDE_DIR LUA_LIBRARIES LUA_LIBRARY LUA_MATH_LIBRARY)
-
+find_package_handle_standard_args(LuaJIT REQUIRED_VARS LUAJIT_INCLUDE_DIR LUAJIT_LIBRARY
+    VERSION_VAR LUAJIT_VERSION_STRING)
+if(LuaJIT_FOUND AND NOT TARGET LuaJIT::LuaJIT)
+    add_library(LuaJIT::LuaJIT UNKNOWN IMPORTED)
+    set_target_properties(LuaJIT::LuaJIT PROPERTIES IMPORTED_LOCATION "${LUAJIT_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${LUAJIT_INCLUDE_DIR}")
+    if(LUAJIT_DEBUG_LIBRARY)
+        set_target_properties(LuaJIT::LuaJIT PROPERTIES IMPORTED_LOCATION_DEBUG "${LUAJIT_DEBUG_LIBRARY}")
+    endif()
+    if(UNIX)
+        set_property(TARGET LuaJIT::LuaJIT APPEND PROPERTY INTERFACE_LINK_LIBRARIES "${CMAKE_DL_LIBS};m")
+    endif()
+endif()
+mark_as_advanced(LUAJIT_INCLUDE_DIR LUAJIT_LIBRARY LUAJIT_DEBUG_LIBRARY)

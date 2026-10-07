@@ -1,0 +1,38 @@
+name: Build Windows and Linux
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ pkg-config libboost-system-dev libluajit-5.1-dev libmariadb-dev libgmp-dev libpugixml-dev
+      - run: cmake --preset linux
+      - run: cmake --build --preset linux --parallel 2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfs-linux-x64
+          path: build/linux/tfs
+  windows:
+    runs-on: windows-2022
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/.tools/vcpkg
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare pinned vcpkg
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$env:VCPKG_ROOT"
+          git -C "$env:VCPKG_ROOT" checkout 2976266a3b2aa358e0eed9e89bde2e0cf59daf0a
+          & "$env:VCPKG_ROOT/bootstrap-vcpkg.bat" -disableMetrics
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - run: cmake --preset windows
+      - run: cmake --build --preset windows --parallel 2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfs-windows-x64
+          path: |
+            build/windows/Release/tfs.exe
+            build/windows/Release/*.dll
