@@ -1,2 +1,0 @@
-# PXT
-OTserver
